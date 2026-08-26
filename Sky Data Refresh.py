@@ -387,12 +387,7 @@ def main() -> None:
         "case-sensitive. The app will guide you through any additional files only when needed."
     )
 
-    refresh_date = st.date_input(
-        "Refresh date (used in output filenames)",
-        value=date.today(),
-        format="DD-MM-YYYY",
-    )
-    date_tag = refresh_date.strftime("%d-%m")
+    date_tag = date.today().strftime("%d-%m")
 
     left, right = st.columns(2)
     with left:
