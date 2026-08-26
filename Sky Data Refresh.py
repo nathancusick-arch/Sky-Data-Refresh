@@ -58,6 +58,12 @@ IE_COUNTRIES = {
     "ROI",
 }
 
+EIRCODE_COUNTRIES = {
+    "IRELAND",
+    "REPUBLIC OF IRELAND",
+    "ROI",
+}
+
 
 class InputFileError(ValueError):
     """A user-facing problem with an uploaded file."""
@@ -226,7 +232,7 @@ def split_street(value: object) -> tuple[str, str, str]:
 
 def system_country(value: object) -> str:
     country = cell_text(value).upper()
-    return "Ireland" if country in {"IRELAND", "REPUBLIC OF IRELAND", "ROI"} else "United Kingdom"
+    return "Ireland" if country in EIRCODE_COUNTRIES else "United Kingdom"
 
 
 def build_sites_upload_template(missing_sites: pd.DataFrame) -> pd.DataFrame:
@@ -280,14 +286,14 @@ def load_token_map(data: bytes) -> dict[str, str]:
 
 
 def token_for_site(site: pd.Series, token_map: dict[str, str]) -> str:
+    country = cell_text(site.get("Country", "")).upper()
+    if country in EIRCODE_COUNTRIES:
+        return "MC Ireland"
+
     post_code = re.sub(r"\s+", "", cell_text(site.get("Post Code", "")).upper())
     matches = [prefix for prefix in token_map if post_code.startswith(prefix)]
     if matches:
         return token_map[max(matches, key=len)]
-
-    country = cell_text(site.get("Country", "")).upper()
-    if country in IE_COUNTRIES:
-        return "MC Ireland"
     return ""
 
 
