@@ -53,6 +53,7 @@ GB_COUNTRIES = {
 
 IE_COUNTRIES = {
     "IRELAND",
+    "NI",
     "NORTHERN IRELAND",
     "REPUBLIC OF IRELAND",
     "ROI",
