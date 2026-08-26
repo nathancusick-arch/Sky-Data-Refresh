@@ -18,6 +18,13 @@ SKY_REQUIRED_COLUMNS = {
     "Country",
 }
 
+AUDIT_REQUIRED_COLUMNS = {
+    "internal_id",
+    "site_code",
+    "auditor_internal_id",
+    "auditor_name",
+}
+
 SITE_UPLOAD_COLUMNS = [
     "name",
     "address_1",
@@ -147,10 +154,12 @@ def load_sky_data(data: bytes) -> pd.DataFrame:
 
 def load_audits_export(data: bytes) -> pd.DataFrame:
     frame = read_csv_bytes(data, "Audits export")
-    require_columns(frame, {"internal_id", "site_code"}, "Audits export")
+    require_columns(frame, AUDIT_REQUIRED_COLUMNS, "Audits export")
     frame = frame.copy()
     frame["internal_id"] = frame["internal_id"].map(cell_text)
     frame["site_code"] = frame["site_code"].map(cell_text)
+    frame["auditor_internal_id"] = frame["auditor_internal_id"].map(cell_text)
+    frame["auditor_name"] = frame["auditor_name"].map(cell_text)
     return frame
 
 
@@ -446,7 +455,15 @@ def main() -> None:
             st.dataframe(
                 compact_preview(
                     removals,
-                    ["internal_id", "site_internal_id", "site_code", "site_name", "site_post_code"],
+                    [
+                        "internal_id",
+                        "auditor_internal_id",
+                        "auditor_name",
+                        "site_internal_id",
+                        "site_code",
+                        "site_name",
+                        "site_post_code",
+                    ],
                 ),
                 use_container_width=True,
                 hide_index=True,
