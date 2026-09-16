@@ -25,6 +25,39 @@ AUDIT_REQUIRED_COLUMNS = {
     "auditor_name",
 }
 
+OPS_REMOVAL_COLUMNS_BEFORE_PATCH = [
+    "internal_id",
+    "order_internal_id",
+    "site_internal_id",
+]
+
+OPS_REMOVAL_COLUMNS_AFTER_PATCH = [
+    "date_of_visit",
+    "time_of_visit",
+    "visit_info",
+    "status",
+    "auditor_internal_id",
+    "auditor_name",
+    "client_name",
+    "site_name",
+    "site_address_1",
+    "site_address_2",
+    "site_address_3",
+    "site_post_code",
+    "site_code",
+    "item_to_order",
+    "primary_result",
+    "secondary_result",
+    "tertiary_result",
+    "date_of_visit_local",
+    "time_of_visit_local",
+    "date_of_visit_tz",
+    "date_of_visit_utc_offset_minutes",
+    "tokens",
+    "survey_score",
+    "survey_score_total",
+]
+
 SITE_UPLOAD_COLUMNS = [
     "name",
     "address_1",
@@ -162,6 +195,10 @@ def load_sky_data(data: bytes) -> pd.DataFrame:
 def load_audits_export(data: bytes) -> pd.DataFrame:
     frame = read_csv_bytes(data, "Audits export")
     require_columns(frame, AUDIT_REQUIRED_COLUMNS, "Audits export")
+    if "patch_name" not in frame.columns and "responsibility" not in frame.columns:
+        raise InputFileError(
+            "Audits export is missing required column: patch_name or responsibility"
+        )
     frame = frame.copy()
     frame["internal_id"] = frame["internal_id"].map(cell_text)
     frame["site_code"] = frame["site_code"].map(cell_text)
@@ -184,6 +221,20 @@ def compare_site_codes(
     ].copy()
     additions = additions.drop_duplicates(subset=["Account ID"], keep="first")
     return removals.reset_index(drop=True), additions.reset_index(drop=True)
+
+
+def build_ops_removals(removals: pd.DataFrame) -> pd.DataFrame:
+    patch_column = "patch_name" if "patch_name" in removals.columns else "responsibility"
+    output_columns = (
+        OPS_REMOVAL_COLUMNS_BEFORE_PATCH
+        + [patch_column]
+        + OPS_REMOVAL_COLUMNS_AFTER_PATCH
+    )
+
+    result = pd.DataFrame(index=removals.index)
+    for column in output_columns:
+        result[column] = removals[column] if column in removals.columns else ""
+    return result.reset_index(drop=True)
 
 
 def dataframe_to_csv_bytes(frame: pd.DataFrame, bom: bool = False) -> bytes:
@@ -458,10 +509,11 @@ def main() -> None:
     if removals.empty:
         st.success("No audits need to be removed.")
     else:
+        ops_removals = build_ops_removals(removals)
         with st.expander(f"View {len(removals):,} removal(s)"):
             st.dataframe(
                 compact_preview(
-                    removals,
+                    ops_removals,
                     [
                         "internal_id",
                         "auditor_internal_id",
@@ -479,7 +531,7 @@ def main() -> None:
         with removal_col:
             render_download(
                 f"Download Removals {date_tag}.csv",
-                dataframe_to_csv_bytes(removals, bom=True),
+                dataframe_to_csv_bytes(ops_removals, bom=True),
                 f"Removals {date_tag}.csv",
                 "download_removals",
             )
